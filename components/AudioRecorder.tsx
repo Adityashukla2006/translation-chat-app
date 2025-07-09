@@ -157,8 +157,8 @@ export default function AudioRecorder({
   try {
     const parsedError = JSON.parse(uploadErrorText);
     uploadErrorMessage = parsedError?.error || uploadErrorText;
-  } catch (_) {
-    console.error("Upload failed: ", uploadResponse.status, uploadErrorMessage);
+  } catch (error) {
+    console.error("Upload failed: ", uploadResponse.status, error);
   }
 
   throw new Error(`Upload failed: ${uploadResponse.status} - ${uploadErrorMessage}`);
