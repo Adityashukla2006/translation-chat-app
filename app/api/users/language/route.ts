@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jwtVerify } from "@/lib/jwt"; // Your own jwtVerify helper function
+
 
 export async function GET(req: NextRequest) {
   const {searchParams} = new URL(req.url);

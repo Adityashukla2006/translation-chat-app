@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
-import { jwtVerify, signJwt } from "@/lib/jwt";
-import { Session } from "inspector/promises";
-import { verify } from "crypto";
-
-interface SessionUser {
-  id: string;
-  name: string;
-}
+import { jwtVerify } from "@/lib/jwt";
+  
 
 
-export async function POST(req: NextRequest, {params} : {params : {Id : string}}) {
+export async function POST(
+  req: NextRequest,
+  context: { params: { Id: string } }
+) {
   const token = req.cookies.get("token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = jwtVerify(token);
   const { chatId, recipientId, content, audioUrl, type } = await req.json();
-  const senderId = params.Id;
+  const senderId = context.params.Id;
   if (!chatId || !recipientId || !type) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }

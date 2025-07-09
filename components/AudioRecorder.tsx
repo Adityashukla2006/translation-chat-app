@@ -1,27 +1,16 @@
 "use client";
 import { useRef, useState } from "react";
 
-interface Message {
-  id?: string;
-  senderId: string;
-  recipientId: string;
-  content?: string;
-  audioUrl?: string;
-  type: string;
-  createdAt : string;
-  chatRoomId: string;
-}
+
 interface AudioRecorderProps {
   apiUrl: string;
   language: string;
   senderId: string;
   recipientId: string;
   chatRoomId: string;
-  // onAudioSent?: (message: Message) =>void;
 }
 
 export default function AudioRecorder({
-  // onAudioSent,
   apiUrl, 
   language, 
   senderId, 
@@ -41,9 +30,6 @@ export default function AudioRecorder({
       setRecording(true);
       audioChunks.current = [];
       
-      // Clean up any previous state
-      audioChunks.current = [];
-      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -52,7 +38,6 @@ export default function AudioRecorder({
         }
       });
       
-      // Check supported MIME types in order of preference
       const supportedTypes = [
         'audio/webm;codecs=opus',
         'audio/webm',
@@ -61,7 +46,7 @@ export default function AudioRecorder({
         'audio/wav'
       ];
       
-      let mimeType = 'audio/webm'; // Default fallback
+      let mimeType = 'audio/webm'; 
       for (const type of supportedTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
           mimeType = type;
@@ -115,12 +100,10 @@ export default function AudioRecorder({
         throw new Error("No audio data recorded");
       }
 
-      // Create blob with the correct MIME type used during recording
       const audioBlob = new Blob(audioChunks.current, { 
         type: mimeTypeRef.current 
       });
       
-      // Prepare form data for voice processing API
       const formData = new FormData();
       formData.append("audio", audioBlob, `input.${getFileExtension(mimeTypeRef.current)}`);
       formData.append("preferred_language", language);
@@ -138,7 +121,6 @@ export default function AudioRecorder({
 
       const data = await res.json();
       
-      // Check if response contains error
       if (data.error) {
         throw new Error(data.error);
       }
@@ -146,8 +128,7 @@ export default function AudioRecorder({
       
       const { translated_text, transcript, output_audio_bytes } = data;
 
-      // Use the processed audio from the API response
-      let finalAudioBlob = audioBlob; // Default to original
+      let finalAudioBlob = audioBlob; 
       
       if (output_audio_bytes && Array.isArray(output_audio_bytes) && output_audio_bytes.length > 0) {
         const byteArray = new Uint8Array(output_audio_bytes);

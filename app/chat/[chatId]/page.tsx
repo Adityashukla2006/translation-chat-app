@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import AudioRecorder from "@/components/AudioRecorder";
 import { pusherClient } from "@/lib/pusherClient";
-import { v4 as uuidv4 } from "uuid";
+
 
 interface Message {
   id?: string;
