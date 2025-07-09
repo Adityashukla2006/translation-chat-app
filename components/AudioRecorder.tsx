@@ -126,7 +126,7 @@ export default function AudioRecorder({
       }
       
       
-      const { translated_text, transcript, output_audio_bytes } = data;
+      const { transcript, output_audio_bytes } = data;
 
       let finalAudioBlob = audioBlob; 
       
@@ -151,14 +151,14 @@ export default function AudioRecorder({
       
 
       if (!uploadResponse.ok) {
-  let uploadErrorText = await uploadResponse.text();
+  const uploadErrorText = await uploadResponse.text();
   let uploadErrorMessage = uploadErrorText;
 
   try {
     const parsedError = JSON.parse(uploadErrorText);
     uploadErrorMessage = parsedError?.error || uploadErrorText;
   } catch (_) {
-    // leave as text if not JSON
+    console.error("Upload failed: ", uploadResponse.status, uploadErrorMessage);
   }
 
   throw new Error(`Upload failed: ${uploadResponse.status} - ${uploadErrorMessage}`);

@@ -4,10 +4,6 @@ import { jwtVerify } from "@/lib/jwt";
 import { pusherServer } from "@/lib/pusher";
 
 
-interface SessionUser {
-  id: string;
-  name: string;
-}
 
 function getChatRoomId(userId1: string, userId2: string): string { 
   return [userId1,userId2].sort().join("_");
