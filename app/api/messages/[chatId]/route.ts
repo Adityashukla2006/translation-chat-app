@@ -21,6 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{chatI
   const userId = jwtVerify(token);
   const sender = (await params).chatId;
   const chatRoomId = getChatRoomId(userId,sender);
+   
   
   const messages = await prisma.message.findMany({
     where: 

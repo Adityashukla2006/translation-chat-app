@@ -170,39 +170,27 @@ export default function AudioRecorder({
       
 
       if (!uploadResponse.ok) {
-        const uploadError = await uploadResponse.text();
-        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadError}`);
+  let uploadErrorText = await uploadResponse.text();
+  let uploadErrorMessage = uploadErrorText;
+
+  try {
+    const parsedError = JSON.parse(uploadErrorText);
+    uploadErrorMessage = parsedError?.error || uploadErrorText;
+  } catch (_) {
+    // leave as text if not JSON
+  }
+
+  throw new Error(`Upload failed: ${uploadResponse.status} - ${uploadErrorMessage}`);
+}
+
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error("Audio processing error:", err);
+        alert(`Failed to process audio message: ${errorMessage}`);
+      } finally {
+        setLoading(false);
       }
-
-      const {audioUrl} = await uploadResponse.json();
-
-      // if (onAudioSent) {
-      //     onAudioSent({
-      //     // type: "voice",
-      //     // audioUrl,
-      //     // content: translated_text,
-      //     // senderId,
-      //     // recipientId,
-      //     // chatRoomId
-      //     senderId,
-      //     recipientId,
-      //     content: translated_text,
-      //     audioUrl,
-      //     type:"voice",
-      //     createdAt:new Date().toISOString(),
-      //     chatRoomId
-      //   });
-      // }
-      
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error("Audio processing error:", err);
-      alert(`Failed to process audio message: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   const getFileExtension = (mimeType: string): string => {
     if (mimeType.includes('webm')) return 'webm';

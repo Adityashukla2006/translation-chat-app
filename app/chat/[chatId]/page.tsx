@@ -26,7 +26,7 @@ export function getChatRoomId(userId1: string, userId2: string): string {
   return [userId1, userId2].sort().join("_");
 }
 
-const VOICE_API_URL = "http://127.0.0.1:8000/api/voice";
+const VOICE_API_URL = "https://voice-translation-api-production-0844.up.railway.app/api/voice";
 
 function getUserFromToken(): User | null {
   if (typeof document === "undefined") return null;
@@ -45,7 +45,6 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileToken = uuidv4();
   const user = getUserFromToken();
   const recipientId = params.chatId;
   const chatId = user ? getChatRoomId(user.name, recipientId) : "";
