@@ -1,0 +1,26 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  password  String  // For email/password auth
+  preferred_language String @default("en")
+}
+
+model Message {
+   id            String   @id @default(cuid())
+  chatRoomId    String 
+  senderId      String
+  recipientId   String
+  content       String?  // Text message or transcript
+  audioUrl      String?  // URL to audio file (voice message)
+  type          String   // "text" | "voice"
+  createdAt     DateTime @default(now())
+}
