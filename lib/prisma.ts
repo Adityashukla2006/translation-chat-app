@@ -1,15 +1,14 @@
-// Import PrismaClient using proper TypeScript import
-import * as prismaClient from '@prisma/client';
-const { PrismaClient } = prismaClient;
+// lib/prisma.ts
 
-// Define a proper type for the global Prisma instance
-type PrismaInstanceType = InstanceType<typeof PrismaClient>;
-const globalForPrisma = global as unknown as { prisma: PrismaInstanceType };
+import { PrismaClient } from '@prisma/client';
 
-// Create or reuse the Prisma instance
-export const prisma = 
-  globalForPrisma.prisma || 
-  new PrismaClient();
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-// Save the instance to avoid multiple instances in development
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma =
+  globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
