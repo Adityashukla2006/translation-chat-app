@@ -162,7 +162,7 @@ export default function AudioRecorder({
           // Handle base64 string (from legacy backend)
           else if (typeof outputAudioBytes === "string" && outputAudioBytes.length > 0) {
             const byteArray = Uint8Array.from(atob(outputAudioBytes), c => c.charCodeAt(0));
-            if (byteArray.length > 100) {
+            if (byteArray.length > 1) {
               finalAudioBlob = new Blob([byteArray], { type: "audio/mpeg" });
               console.log("Using translated audio bytes (base64), size:", byteArray.length);
             }
