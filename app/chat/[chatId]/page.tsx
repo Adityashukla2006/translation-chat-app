@@ -48,7 +48,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = getUserFromToken();
   const chatId = params.chatId as string;
-  const recipientId = user ? chatId.split('-').filter(id => id !== user.name)[0] : "";
+  const recipientId = user ? chatId.split('_').filter(id => id !== user.name)[0] : "";
   const roomId = user && recipientId ? getChatRoomId(user.name, recipientId) : "";
 
   useEffect(() => {
