@@ -17,8 +17,12 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const base64Audio = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = file.type || "audio/webm";
-    const audioUrl = `data:${mimeType};base64,${base64Audio}`;
+    
+    // Always use audio/mpeg for better compatibility across browsers
+    // Most browsers support MP3 playback natively
+    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+    
+    console.log(`Audio upload: Size=${base64Audio.length} bytes`);
 
     const savedMessage = await prisma.message.create({
       data: {

@@ -47,7 +47,7 @@ export default function ChatSelectionPage() {
         {users.filter(u => u.name !== user.name).map(u => (
           <Link
             key={u.name}
-            href={`/chat/${u.name}`}
+            href={`/chat/${user.name}_${u.name}`}
             className="block p-4 bg-white rounded-lg shadow hover:bg-blue-100 transition border border-gray-200"
           >
             <div className="flex items-center justify-between">

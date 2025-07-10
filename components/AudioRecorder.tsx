@@ -125,21 +125,37 @@ export default function AudioRecorder({
         throw new Error(data.error);
       }
       
+      // Extract data from API response with fallbacks
+      const transcript = data.transcript || "";
+      const output_audio_bytes = data.output_audio_bytes || [];
       
-      const { transcript, output_audio_bytes } = data;
-
-      let finalAudioBlob = audioBlob; 
+      // Default to using the original recording
+      let finalAudioBlob = audioBlob;
       
+      // Try to use the translated audio if available
       if (output_audio_bytes && Array.isArray(output_audio_bytes) && output_audio_bytes.length > 0) {
-        const byteArray = new Uint8Array(output_audio_bytes);
-        finalAudioBlob = new Blob([byteArray], { type: "audio/wav" });
-      } 
+        try {
+          const byteArray = new Uint8Array(output_audio_bytes);
+          // Only use translated audio if it's a valid size
+          if (byteArray.length > 100) { // Minimum size check
+            finalAudioBlob = new Blob([byteArray], { type: "audio/mpeg" });
+            console.log("Using translated audio bytes, size:", byteArray.length);
+          } else {
+            console.log("Translated audio too small, using original recording");
+          }
+        } catch (error) {
+          console.error("Error processing translated audio bytes:", error);
+          // Continue with original audio blob if there's an error
+        }
+      } else {
+        console.log("No translated audio bytes received, using original recording");
+      }
       
       // Upload the final audio file
       const uploadFormData = new FormData();
       uploadFormData.append("audio", finalAudioBlob, "audio.wav");
       uploadFormData.append("senderId", senderId);
-      uploadFormData.append("receiverId", recipientId);
+      uploadFormData.append("recipientId", recipientId);
       uploadFormData.append("chatRoomId", chatRoomId);
       uploadFormData.append("content",transcript);
       
