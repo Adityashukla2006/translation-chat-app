@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import AudioRecorder from "@/components/AudioRecorder";
 import { pusherClient } from "@/lib/pusherClient";
-
+import { getChatRoomId } from "@/lib/chat";
+import { useParams } from "next/navigation";
 
 interface Message {
   id?: string;
@@ -22,9 +23,8 @@ interface User {
   name: string;
 }
 
-export function getChatRoomId(userId1: string, userId2: string): string {
-  return [userId1, userId2].sort().join("_");
-}
+// No need for ChatPageProps with useParams hook
+
 
 const VOICE_API_URL = "https://voice-translation-api-production-0844.up.railway.app/api/voice";
 
@@ -40,46 +40,48 @@ function getUserFromToken(): User | null {
   }
 }
 
-export default function ChatPage({ params }: { params: { chatId: string } }) {
+export default function ChatPage() {
+  const params = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = getUserFromToken();
-  const recipientId = params.chatId;
-  const chatId = user ? getChatRoomId(user.name, recipientId) : "";
+  const chatId = params.chatId as string;
+  const recipientId = user ? chatId.split('-').filter(id => id !== user.name)[0] : "";
+  const roomId = user && recipientId ? getChatRoomId(user.name, recipientId) : "";
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !recipientId) return;
   
     fetch(`/api/users/language/?userId=${recipientId}`)
       .then(res => res.json())
       .then(data => setLanguage(data.preferred_language || "en"))
       .catch(err => {
         console.error("Failed to fetch language:", err);
-        setLanguage("en"); // fallback
+        setLanguage("en"); 
       });
-  }, [user]);
+  }, [user, recipientId]);
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!roomId || !recipientId) return;
     fetch(`/api/messages/${recipientId}`)
       .then(res => res.json())
       .then(data => {
-        const filtered = data.messages.filter((msg: Message) => msg.chatRoomId === chatId);
+        const filtered = data.messages.filter((msg: Message) => msg.chatRoomId === roomId);
         setMessages(filtered);
       });
 
-    const channel = pusherClient.subscribe(`chat-${chatId}`);
+    const channel = pusherClient.subscribe(`chat-${roomId}`);
     const handleNewMessage = (message: Message) => {
       setMessages(prev => [...prev, message]);
     };
     channel.bind("new-message", handleNewMessage);
     return () => {
       channel.unbind("new-message", handleNewMessage);
-      pusherClient.unsubscribe(`chat-${chatId}`);
+      pusherClient.unsubscribe(`chat-${roomId}`);
     };
-  }, [chatId]);
+  }, [roomId, recipientId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,15 +91,15 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
 
   const sendMessage = async () => {
     if (!input.trim() || !user) return;
-    const res = await fetch(`/api/messages/${chatId}`, {
+    const res = await fetch(`/api/messages/${roomId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chatId,
-        sender: recipientId,
+        chatId: roomId,
+        recipient: recipientId,
         content: input,
         audioUrl: null,
-        type: "text",
+        type: "text"
       }),
     });
     if (res.ok) setInput("");
@@ -110,7 +112,7 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
   if (!user) return <div>User not authenticated!!</div>;
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      <header className="p-4 bg-blue-600 text-white font-bold text-lg">Chat Room: {chatId}</header>
+      <header className="p-4 bg-blue-600 text-white font-bold text-lg">Chat Room: {roomId}</header>
       <main className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
   
@@ -153,7 +155,7 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
           language={language}
           senderId = {user.name}
           recipientId= {recipientId}
-          chatRoomId = {chatId}
+          chatRoomId = {roomId}
         />
       </footer>
     </div>

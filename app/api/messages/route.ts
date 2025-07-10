@@ -6,16 +6,14 @@ import { jwtVerify } from "@/lib/jwt";
 
 
 export async function POST(
-  req: NextRequest,
-  context: { params: { Id: string } }
+  req: NextRequest
 ) {
   const token = req.cookies.get("token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = jwtVerify(token);
-  const { chatId, recipientId, content, audioUrl, type } = await req.json();
-  const senderId = context.params.Id;
+  const { chatId, recipientId, content, audioUrl, type, senderId } = await req.json();
   if (!chatId || !recipientId || !type) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }

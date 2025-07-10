@@ -9,14 +9,15 @@ function getChatRoomId(userId1: string, userId2: string): string {
   return [userId1,userId2].sort().join("_");
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{chatId: string}> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   const token = req.cookies.get("token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = jwtVerify(token);
-  const sender = (await params).chatId;
-  const chatRoomId = getChatRoomId(userId,sender);
+  const chatId = (await params).chatId;
+  const recipientId = chatId.split('_').filter(id => id !== userId)[0];
+  const chatRoomId = getChatRoomId(userId, recipientId);
    
   
   const messages = await prisma.message.findMany({
@@ -29,13 +30,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{chatI
 } 
 
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   const token = req.cookies.get("token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = jwtVerify(token);
-  const { chatId,sender, content, audioUrl, type } = await req.json();
+  const { recipient, content, audioUrl, type } = await req.json();
+  const chatId = (await params).chatId;
   if (!chatId || !type) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
     data: {
       chatRoomId: chatId,
       senderId: userId,
-      recipientId:sender,
+      recipientId:recipient,
       content,
       audioUrl,
       type,
