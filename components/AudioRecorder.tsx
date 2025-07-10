@@ -1,7 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
 
-
 interface AudioRecorderProps {
   apiUrl: string;
   language: string;
@@ -24,7 +23,6 @@ export default function AudioRecorder({
   const audioChunks = useRef<Blob[]>([]);
   const mimeTypeRef = useRef<string>('audio/webm');
 
-
   const startRecording = async () => {
     try {
       setRecording(true);
@@ -32,8 +30,6 @@ export default function AudioRecorder({
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
           sampleRate: 44100
         }
       });
@@ -67,7 +63,7 @@ export default function AudioRecorder({
         }
       };
       
-      mediaRecorder.onstop = handleStop;
+      mediaRecorder.onstop = () => handleStop();
       mediaRecorder.onerror = (e) => {
         console.error("MediaRecorder error:", e.error);
         setRecording(false);
@@ -93,62 +89,90 @@ export default function AudioRecorder({
   };
 
   const handleStop = async () => {
-    setLoading(true);
-    
     try {
-      if (audioChunks.current.length === 0) {
+      setLoading(true);
+      
+      if (!audioChunks.current || audioChunks.current.length === 0) {
         throw new Error("No audio data recorded");
       }
 
+      // Create audio blob from recorded chunks
       const audioBlob = new Blob(audioChunks.current, { 
         type: mimeTypeRef.current 
       });
       
+      console.log("Audio recording details:", {
+        mimeType: mimeTypeRef.current,
+        size: audioBlob.size,
+        chunks: audioChunks.current.length
+      });
+      
+      // Prepare form data for API request
       const formData = new FormData();
       formData.append("audio", audioBlob, `input.${getFileExtension(mimeTypeRef.current)}`);
       formData.append("preferred_language", language);
       
+      console.log("Sending audio to API:", apiUrl);
+      
+      let transcript = "";
+      let translatedText = "";
+      let finalAudioBlob = audioBlob; // Default to original recording
+      
+      // Process audio with the translation API
       const res = await fetch(apiUrl, {
         method: "POST",
         body: formData,
       });
       
-      
       if (!res.ok) {
         const errorText = await res.text();
+        console.error(`Voice API error: ${res.status}`, errorText);
         throw new Error(`Voice API error: ${res.status} ${errorText}`);
       }
 
       const data = await res.json();
+      console.log("API response received:", {
+        hasTranscript: !!data.transcript,
+        hasTranslatedText: !!data.translated_text,
+        hasAudioBytes: !!data.output_audio_bytes,
+        audioByteType: typeof data.output_audio_bytes
+      });
       
       if (data.error) {
+        console.error("API returned error:", data.error);
         throw new Error(data.error);
       }
       
       // Extract data from API response with fallbacks
-      const transcript = data.transcript || "";
-      const output_audio_bytes = data.output_audio_bytes || [];
-      
-      // Default to using the original recording
-      let finalAudioBlob = audioBlob;
+      transcript = data.transcript || "";
+      translatedText = data.translated_text || "";
+      const outputAudioBytes = data.output_audio_bytes || [];
       
       // Try to use the translated audio if available
-      if (output_audio_bytes && Array.isArray(output_audio_bytes) && output_audio_bytes.length > 0) {
+      if (outputAudioBytes) {
         try {
-          const byteArray = new Uint8Array(output_audio_bytes);
-          // Only use translated audio if it's a valid size
-          if (byteArray.length > 100) { // Minimum size check
-            finalAudioBlob = new Blob([byteArray], { type: "audio/mpeg" });
-            console.log("Using translated audio bytes, size:", byteArray.length);
+          // Handle array of integers (from updated backend)
+          if (Array.isArray(outputAudioBytes) && outputAudioBytes.length > 0) {
+            const byteArray = new Uint8Array(outputAudioBytes);
+            if (byteArray.length > 100) {
+              finalAudioBlob = new Blob([byteArray], { type: "audio/mpeg" });
+              console.log("Using translated audio bytes (array), size:", byteArray.length);
+            }
+          } 
+          // Handle base64 string (from legacy backend)
+          else if (typeof outputAudioBytes === "string" && outputAudioBytes.length > 0) {
+            const byteArray = Uint8Array.from(atob(outputAudioBytes), c => c.charCodeAt(0));
+            if (byteArray.length > 100) {
+              finalAudioBlob = new Blob([byteArray], { type: "audio/mpeg" });
+              console.log("Using translated audio bytes (base64), size:", byteArray.length);
+            }
           } else {
-            console.log("Translated audio too small, using original recording");
+            console.log("No valid translated audio received, using original recording");
           }
-        } catch (error) {
-          console.error("Error processing translated audio bytes:", error);
-          // Continue with original audio blob if there's an error
+        } catch (err) {
+          console.error("Failed to process audio bytes:", err);
+          console.log("Using original recording due to error");
         }
-      } else {
-        console.log("No translated audio bytes received, using original recording");
       }
       
       // Upload the final audio file
@@ -157,37 +181,37 @@ export default function AudioRecorder({
       uploadFormData.append("senderId", senderId);
       uploadFormData.append("recipientId", recipientId);
       uploadFormData.append("chatRoomId", chatRoomId);
-      uploadFormData.append("content",transcript);
-      
+      uploadFormData.append("content", transcript || translatedText || "Voice message");
       
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
         body: uploadFormData,
       });
-      
 
       if (!uploadResponse.ok) {
-  const uploadErrorText = await uploadResponse.text();
-  let uploadErrorMessage = uploadErrorText;
+        const uploadErrorText = await uploadResponse.text();
+        let uploadErrorMessage = uploadErrorText;
 
-  try {
-    const parsedError = JSON.parse(uploadErrorText);
-    uploadErrorMessage = parsedError?.error || uploadErrorText;
-  } catch (error) {
-    console.error("Upload failed: ", uploadResponse.status, error);
-  }
+        try {
+          const parsedError = JSON.parse(uploadErrorText);
+          uploadErrorMessage = parsedError?.error || uploadErrorText;
+        } catch (error) {
+          console.error("Upload failed: ", uploadResponse.status, error);
+        }
 
-  throw new Error(`Upload failed: ${uploadResponse.status} - ${uploadErrorMessage}`);
-}
-
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error("Audio processing error:", err);
-        alert(`Failed to process audio message: ${errorMessage}`);
-      } finally {
-        setLoading(false);
+        throw new Error(`Upload failed: ${uploadResponse.status} - ${uploadErrorMessage}`);
       }
-    };
+      
+      console.log("Audio message uploaded successfully");
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error("Audio processing error:", err);
+      alert(`Failed to process audio message: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getFileExtension = (mimeType: string): string => {
     if (mimeType.includes('webm')) return 'webm';
