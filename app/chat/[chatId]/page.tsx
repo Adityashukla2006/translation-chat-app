@@ -120,7 +120,7 @@ export default function ChatPage() {
             <div key={msg.id} className={`flex flex-col ${msg.senderId === user.name ? "items-end" : "items-start"}`}>
               <div className="bg-white rounded-lg px-4 py-2 shadow max-w-xs w-full">
                 {msg.type === "voice" && msg.audioUrl ? (
-                  <audio className="w-full mb-2 rounded-lg shadow-sm" controls src={msg.audioUrl.startsWith('/') ? msg.audioUrl : `/${msg.audioUrl}`} />
+                  <audio className="w-full mb-2 rounded-lg shadow-sm" controls src={msg.audioUrl} />
                 ) : null}
                 {msg.content && msg.content.trim() !== "" ? (
                   <div className="text-gray-800">{msg.content}</div>
